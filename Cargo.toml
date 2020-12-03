@@ -23,6 +23,7 @@ capnp = "0.13.6"
 simd-json = "0.3.22"
 simd-json-derive = "0.1.15"
 prost = "0.6"
+persia-speedy = "0.7"
 
 [build-dependencies]
 prost-build = { version = "0.6" }

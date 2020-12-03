@@ -4,6 +4,7 @@ use abomonation_derive::Abomonation;
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use prost::Message;
 use serde::{Deserialize, Serialize};
+use persia_speedy::{Readable, Writable};
 
 #[allow(dead_code, unused_imports)]
 #[path = "../storeddata_generated.rs"]
@@ -18,7 +19,7 @@ pub mod proto3 {
 }
 
 #[derive(
-    Abomonation, Serialize, Deserialize, simd_json_derive::Serialize, simd_json_derive::Deserialize,
+    Abomonation, Serialize, Deserialize, simd_json_derive::Serialize, simd_json_derive::Deserialize, Readable, Writable,
 )]
 pub enum StoredVariants {
     YesNo(bool),
@@ -28,7 +29,7 @@ pub enum StoredVariants {
 }
 
 #[derive(
-    Abomonation, Serialize, Deserialize, simd_json_derive::Serialize, simd_json_derive::Deserialize,
+    Abomonation, Serialize, Deserialize, simd_json_derive::Serialize, simd_json_derive::Deserialize, Readable, Writable,
 )]
 pub struct StoredData {
     pub variant: StoredVariants,
@@ -390,6 +391,21 @@ fn compare_serde(c: &mut Criterion) {
         b.iter(|| unsafe {
             abobuf.clone_from(&buffer);
             black_box(abomonation::decode::<StoredData>(black_box(&mut abobuf))).unwrap();
+        })
+    });
+
+    group.bench_function("sr.speedy", |b| {
+        b.iter(|| {
+            black_box(&mut buffer).clear();
+            let bytes_needed = Writable::<persia_speedy::LittleEndian>::bytes_needed(&value).unwrap();
+            unsafe { buffer.set_len(bytes_needed); }
+            black_box(&value).write_to_buffer(black_box(&mut buffer)).unwrap();
+        })
+    });
+    println!("speedy: {} bytes", buffer.len());
+    group.bench_function("de.speedy", |b| {
+        b.iter(|| {
+            let x: StoredData = StoredData::read_from_buffer_owned(black_box(&buffer)).unwrap();
         })
     });
 
